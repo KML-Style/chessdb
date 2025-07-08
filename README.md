@@ -37,7 +37,9 @@ It allows you to **import, add, and manage tournaments and games**, either manua
 Config the database with
 ```sh
 make config
+./config
 ```
+
 And then the application with
 ```sh
 make
@@ -57,6 +59,9 @@ to launch the application
 
 ## License
 MIT License.
+
+## Documentation
+![UML Diagram](docs/class_diagramm.svg)
 
 
 
