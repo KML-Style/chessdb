@@ -154,6 +154,7 @@ bool Tournament::fromPgn(sqlite3* db, const string& filename) {
         }
     }
 
+
     // Load the games
     vector<Game> loadedGames;
     for (const string& pgn : blocks) {
@@ -169,9 +170,41 @@ bool Tournament::fromPgn(sqlite3* db, const string& filename) {
     setCity(site.empty() ? "Unknown" : site);
     setTime(date.empty() ? Time("2025.01.01 00:00:00 +00:00") : Time(date + " 00:00:00 +00:00"));
     try {
-        setTimeControl(TimeControl(timeControlStr));
+        //setTimeControl(TimeControl(timeControlStr));
+        unsigned int baseMinutes = 0;
+        unsigned int incrementSeconds = 0;
+
+        string str = timeControlStr;
+        str.erase(remove(str.begin(), str.end(), ' '), str.end());
+
+        size_t plusPos = str.find('+');
+        if (plusPos != string::npos) {
+            string minPart = str.substr(0, plusPos);
+            string secPart = str.substr(plusPos + 1);
+
+            size_t minPos = minPart.find("min");
+            if (minPos != string::npos)
+                minPart = minPart.substr(0, minPos);
+            else if ((minPos = minPart.find("m")) != string::npos)
+                minPart = minPart.substr(0, minPos);
+
+            size_t secPos = secPart.find("sec");
+            if (secPos != string::npos)
+                secPart = secPart.substr(0, secPos);
+            else if ((secPos = secPart.find("s")) != string::npos)
+                secPart = secPart.substr(0, secPos);
+
+            baseMinutes = minPart.empty() ? 0 : stoi(minPart);
+            incrementSeconds = secPart.empty() ? 0 : stoi(secPart);
+        }
+
+        TimeControl tc;
+        tc.setBaseMinutes(baseMinutes);
+        tc.setIncrementSeconds(incrementSeconds);
+        setTimeControl(tc);
+
     } catch (...) {
-        cerr << "Erreur parsing TimeControl : " << timeControlStr << endl;
+        cerr << "Error :  parsing TimeControl : " << timeControlStr << endl;
         return false;
     }
     setNumberofRounds(loadedGames.size());
