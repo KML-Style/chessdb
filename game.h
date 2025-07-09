@@ -59,6 +59,8 @@ class Game{
         void parseMoves(const string& mooves);
         string serializeMoves() const;
 
+        void print() const;    
+
         // GETTERS
 
         unsigned int getGameId() const;
