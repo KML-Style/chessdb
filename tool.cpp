@@ -102,3 +102,51 @@ map<string, vector<string>> splitPgnByTournament(const string& pgnPath) {
     }
     return tournaments;
 }
+
+pair<string, string> splitAnnotated(const string& moveToken) {
+    string move, annot;
+    size_t i = 0;
+
+    while (i < moveToken.size() && 
+          (isalnum(moveToken[i]) || moveToken[i] == '=' || moveToken[i] == '+' || moveToken[i] == '#' || moveToken[i] == '-' || moveToken[i] == 'O')) {
+        move += moveToken[i];
+        i++;
+    }
+
+    while (i < moveToken.size()) {
+        if (moveToken[i] == '!' || moveToken[i] == '?') {
+            while (i < moveToken.size() && (moveToken[i] == '!' || moveToken[i] == '?')) {
+                annot += moveToken[i];
+                i++;
+            }
+            annot += " ";
+        }
+        else if (moveToken[i] == '$') {
+            annot += "$";
+            i++;
+            while (i < moveToken.size() && isdigit(moveToken[i])) {
+                annot += moveToken[i];
+                i++;
+            }
+            annot += " ";
+        }
+        else if (moveToken[i] == '{') {
+            annot += "{";
+            i++;
+            while (i < moveToken.size() && moveToken[i] != '}') {
+                annot += moveToken[i];
+                i++;
+            }
+            if (i < moveToken.size() && moveToken[i] == '}') {
+                annot += "}";
+                i++;
+            }
+            annot += " ";
+        }
+        else {
+            i++;
+        }
+    }
+    while (!annot.empty() && isspace(annot.back())) annot.pop_back();
+    return {move, annot};
+}
