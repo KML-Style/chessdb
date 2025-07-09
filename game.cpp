@@ -256,77 +256,76 @@ string Game::serializeMoves() const {
 void Game::parseMoves(const string& movesStr) {
     /**
      * Parses a string of chess moves in PGN-like format and populates the game's move list.
-     *
-     * This function reads a sequence of moves (including move numbers and annotations) from a string. 
-     * For each move pair (white and black), it extracts the moves, any associated comments or annotations, 
-     * and adds them as Move objects to the Game.
-     *
-     * - Both white and black moves are handled, and odd/even turns are respected.
-     * - The function can handle incomplete move pairs at the end (i.e., if a black move is missing).
+     * Handles scores and possible incomplete last move.
      */
+
     istringstream iss(movesStr);
     string token;
     unsigned int currentNumber = 0;
     string whiteMove, blackMove;
     string whiteComment, blackComment;
-    bool expectingWhite = true;
-    bool expectingBlack = false;
-
-    auto splitAnnotated = [](const string& moveToken) -> pair<string, string> {
-        smatch match;
-        regex pattern(R"(([a-zA-Z0-9+=#]+)([!?]{1,2})?)");
-        if (regex_match(moveToken, match, pattern)) {
-            string move = match[1].str();
-            string annot = match[2].matched ? match[2].str() : "";
-            return {move, annot};
-        }
-        return {moveToken, ""}; 
-    };
+    bool expectingWhite = true, expectingBlack = false;
 
     while (iss >> token) {
+
+        if (token == "1-0" || token == "0-1" || token == "1/2-1/2" || token == "*")
+            continue;
+
+        if (token.back() == '.' && all_of(token.begin(), token.end() - 1, ::isdigit)) {
+            currentNumber = stoi(token.substr(0, token.size() - 1));
+            expectingWhite = true;
+            continue;
+        } else if (token.size() > 3 && token.substr(token.size() - 3) == "..." && all_of(token.begin(), token.end() - 3, ::isdigit)) {
+            currentNumber = stoi(token.substr(0, token.size() - 3));
+            expectingWhite = false;
+            continue;
+        }
+
         if (token[0] == '{') {
             string comment = token;
             while (comment.back() != '}' && iss >> token)
                 comment += " " + token;
-            comment = comment.substr(1, comment.size() - 2); // Trim {}
-            if (expectingBlack)
-                blackComment += (blackComment.empty() ? "" : " ") + comment;
-            else
+            comment = comment.substr(1, comment.size() - 2);
+            if (expectingWhite)
                 whiteComment += (whiteComment.empty() ? "" : " ") + comment;
+            else
+                blackComment += (blackComment.empty() ? "" : " ") + comment;
+            continue;
         }
-        else if (token.back() == '.' && all_of(token.begin(), token.end() - 1, ::isdigit)) {
-            currentNumber = stoi(token.substr(0, token.size() - 1));
-            expectingWhite = true;
-            expectingBlack = false;
-        }
-        else {
-            auto [cleanMove, annot] = splitAnnotated(token);
 
-            if (expectingWhite) {
-                whiteMove = cleanMove;
-                if (!annot.empty()) whiteComment = annot;
-                expectingWhite = false;
-                expectingBlack = true;
-            } else if (expectingBlack) {
-                blackMove = cleanMove;
-                if (!annot.empty()) blackComment = annot;
-                Move m(currentNumber, whiteMove, blackMove, whiteComment, blackComment);
-                addMove(m);
-                
-                // Reset
-                whiteMove.clear(); blackMove.clear();
-                whiteComment.clear(); blackComment.clear();
-                expectingBlack = false;
+        if (token[0] == '(') {
+            int open = 1;
+            while (open > 0 && iss >> token) {
+                if (token[0] == '(') open++;
+                if (token.back() == ')') open--;
             }
+            continue;
+        }
+
+        auto [cleanMove, annot] = splitAnnotated(token);
+
+        if (expectingWhite) {
+            whiteMove = cleanMove;
+            if (!annot.empty()) whiteComment = annot;
+            expectingWhite = false;
+        } else {
+            blackMove = cleanMove;
+            if (!annot.empty()) blackComment = annot;
+            Move m(currentNumber, whiteMove, blackMove, whiteComment, blackComment);
+            addMove(m);
+            whiteMove.clear(); blackMove.clear();
+            whiteComment.clear(); blackComment.clear();
+            expectingWhite = true;
         }
     }
 
-    if (!whiteMove.empty() && !blackMove.empty()) {
-        Move m(currentNumber, whiteMove, blackMove, whiteComment, blackComment);
+    if (!whiteMove.empty()) {
+        Move m(currentNumber, whiteMove, "", whiteComment, "");
         addMove(m);
-        
     }
+
 }
+
 
 bool Game::fromPgn(sqlite3* db, std::istream& in) {
     string line;
@@ -352,6 +351,7 @@ bool Game::fromPgn(sqlite3* db, std::istream& in) {
             movesStream << line << " ";
         }
     }
+
 
     if (tags.count("White")) {
         Player w = Player::getByExactName(db, tags["White"]);
@@ -549,4 +549,35 @@ Game Game::getById(sqlite3* db, unsigned int id) {
 
     sqlite3_finalize(stmt);
     return g;
+}
+
+void Game::print() const {
+    cout << "Game ID: " << gameId << endl;
+    cout << "Tournament ID: " << tournamentId << endl;
+
+    cout << "White: ";
+    cout << white.getFirstname() << " " << white.getName();
+    cout << " (" << whiteElo << ")" << endl;
+
+    cout << "Black: ";
+    cout << black.getFirstname() << " " << black.getName();
+    cout << " (" << blackElo << ")" << endl;
+
+    cout << "Result: ";
+    switch(result) {
+        case Result::White: cout << "1-0"; break;
+        case Result::Black: cout << "0-1"; break;
+        case Result::Draw: cout << "1/2-1/2"; break;
+        default: cout << "?";
+    }
+    cout << endl;
+
+    cout << "Link: " << link << endl;
+
+    cout << "Moves: ";
+    for (const Move& m : moves) {
+        cout << m << endl;
+        cout << " ";
+    }
+    cout << endl;
 }
