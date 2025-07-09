@@ -5,28 +5,38 @@ TimeControl::TimeControl() : type(TimeControlType::Unknown), base_m(0), incremen
 
 TimeControl::TimeControl(const string& timecontrol_str) {
 
-    regex pattern(R"(\s*(\d+)\s*(?:min|m|minutes)?\s*\+\s*(\d+)\s*(?:s|sec|seconds)?\s*)", regex_constants::icase);
-    smatch match;
+    unsigned int baseMinutes = 0;
+    unsigned int incrementSeconds = 0;
 
-    if (std::regex_match(timecontrol_str, match, pattern)) {
-        base_m = stoi(match[1].str());
-        increment_s = stoi(match[2].str());
+    string str = timecontrol_str;
+    str.erase(remove(str.begin(), str.end(), ' '), str.end());
 
-        int totalSeconds = base_m * 60 + 40 * increment_s;
+    size_t plusPos = str.find('+');
+    if (plusPos != string::npos) {
+        string minPart = str.substr(0, plusPos);
+        string secPart = str.substr(plusPos + 1);
 
-        if (totalSeconds < 180)
-            type = TimeControlType::Bullet;
-        else if (totalSeconds < 600)
-            type = TimeControlType::Blitz;
-        else if (totalSeconds < 1500)
-            type = TimeControlType::Rapid;
-        else
-            type = TimeControlType::Classical;
-    } else {
-        cerr << "Format error" << std::endl;
-        throw invalid_argument("Invalid time control format: " + timecontrol_str);
+        size_t minPos = minPart.find("min");
+        if (minPos != string::npos)
+            minPart = minPart.substr(0, minPos);
+        else if ((minPos = minPart.find("m")) != string::npos)
+            minPart = minPart.substr(0, minPos);
+
+            size_t secPos = secPart.find("sec");
+            if (secPos != string::npos)
+                secPart = secPart.substr(0, secPos);
+            else if ((secPos = secPart.find("s")) != string::npos)
+                secPart = secPart.substr(0, secPos);
+
+            baseMinutes = minPart.empty() ? 0 : stoi(minPart);
+            incrementSeconds = secPart.empty() ? 0 : stoi(secPart);
+        }
+
+        setBaseMinutes(baseMinutes);
+        setIncrementSeconds(incrementSeconds);
     }
-}
+
+   
 
 
 // Destructor
