@@ -28,5 +28,6 @@ bool startsWith(const string& str, const string& prefix);
 Result stringToResult(const string& str);
 string resultToString(Result r);
 map<string, vector<string>> splitPgnByTournament(const string& pgnPath);
+pair<string, string> splitAnnotated(const string& moveToken);
 
 #endif
