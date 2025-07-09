@@ -48,7 +48,7 @@ Player selectPlayerByName(sqlite3* db, const string& partialName) {
             string prenom, nom;
             
             cout << "Name : ";
-            getline(cin, prenom);
+            getline(cin, nom);
             newPlayer.setName(nom);
             
             cout << "Firstname : "; 
@@ -97,20 +97,6 @@ int main() {
         std::cerr << "Error : Cannot open database : " << sqlite3_errmsg(db) << std::endl;
         return 1;
     }
-
-    try {
-        string sqlScript = readSQLFile("sql/create.sql");
-        executeSQLScript(db, sqlScript);
-    } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
-    }
-
-    // try {
-    //     string sqlScript = readSQLFile("sql/delete.sql");
-    //     executeSQLScript(db, sqlScript);
-    // } catch (const exception& e) {
-    //     cerr << e.what() << endl;
-    // }
 
     string filename;
     int choix;
